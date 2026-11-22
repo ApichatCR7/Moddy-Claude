@@ -29,8 +29,16 @@ Claude Code's automatic summarising of the earlier conversation when the context
 _Avoid_: auto compact, auto-summary
 
 **Compact threshold**:
-How full the context window gets, as a percentage, before Autocompact starts.
-_Avoid_: trigger point, limit
+The context size at which Autocompact starts, set separately for each model and shown both in tokens and as a percentage of that model's context window.
+_Avoid_: trigger point, limit, compact window
+
+**Context usage**:
+How full the context window is right now, as a percentage of the current model's context window.
+_Avoid_: context %, token usage
+
+**Locked**:
+The state of a control the Mod cannot change, because something outside it (an environment variable, an account that lacks the feature) decides the value.
+_Avoid_: disabled, greyed out
 
 ### Advisor
 
