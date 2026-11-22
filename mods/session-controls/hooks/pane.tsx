@@ -15,9 +15,6 @@ export async function drawPane(
   const notice = await readNotice($)
   const focus = await readFocus($)
 
-  if (state === null) {
-    return <Text dimColor>Waiting for Claude Code…</Text>
-  }
   const { window, threshold } = state
   const isOn = state.autocompact.isOn
   const advisor = advisorChoice(state.advisor.model)

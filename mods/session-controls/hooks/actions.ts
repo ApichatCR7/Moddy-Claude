@@ -12,9 +12,6 @@ import { tokensFor } from './threshold'
 export async function toggleAutocompact($: EngineInterface): Promise<void> {
   const state = await readSnapshot($)
 
-  if (state === null) {
-    return
-  }
   await setNotice($, null)
   const { deny } = await $.config.set({
     key: 'autoCompact',
@@ -55,7 +52,7 @@ export async function pickThreshold(
 ): Promise<void> {
   const state = await readSnapshot($)
 
-  if (state?.window === undefined || value === 'current') {
+  if (state.window === undefined || value === 'current') {
     return
   }
   const args =

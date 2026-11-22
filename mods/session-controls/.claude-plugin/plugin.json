@@ -1,6 +1,6 @@
 {
   "name": "session-controls",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A Band and a Pane to see and change Autocompact, the Compact threshold and the Advisor model.",
   "author": {
     "name": "ApichatCR7"

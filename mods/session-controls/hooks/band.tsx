@@ -11,10 +11,6 @@ export async function drawBand(
 ) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const state = await readSnapshot($)
-
-  if (state === null) {
-    return null
-  }
   const context =
     state.contextUsage === undefined ? '—' : `${state.contextUsage}%`
   const { tokens } = state.threshold

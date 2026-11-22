@@ -536,3 +536,39 @@ test('Claude Code\'s words about a rejected change are gone after the next turn'
   expect(await pane.find({ type: 'Text', text: rejection })).toBeUndefined()
   await pane.unmount()
 })
+
+// Installing the Mod from the desktop app makes it active in the session that
+// is already open, so `session.start` has passed before the Mod is there.
+test('the Band shows on a session the Mod joined after it started', async ($, on) => {
+  fakeEngine(on, { contextUsage: 62, advisorModel: 'opus' })
+  const ui = await $.ui.mount(BAND)
+
+  const text = await bandText(ui)
+
+  expect(text).toContain('Context: 62%')
+  expect(text).toContain('Advisor: Opus')
+  await ui.unmount()
+})
+
+test('the Pane offers its controls on a session the Mod joined after it started', async ($, on) => {
+  fakeEngine(on, { window: 200_000 })
+  const ui = await $.ui.mount(PANE)
+
+  expect(await optionsOf(ui, 'threshold')).toContain('160k (80%)')
+  await ui.unmount()
+})
+
+test('tapping Autocompact works on a session the Mod joined after it started', async ($, on) => {
+  const engine = fakeEngine(on)
+  const ui = await $.ui.mount(BAND)
+
+  await ui.press({ key: 'autocompact' })
+
+  expect(engine.calls).toContainEqual({
+    call: 'config.set',
+    key: 'autoCompact',
+    value: false,
+  })
+  expect(await bandText(ui)).toContain('Autocompact: OFF')
+  await ui.unmount()
+})

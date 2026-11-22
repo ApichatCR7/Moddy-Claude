@@ -29,9 +29,7 @@ export const register: Register = on => {
     if (e.props.hasSurvey) {
       return next(e)
     }
-    const row = await drawBand($, e)
-
-    return row ?? next(e)
+    return drawBand($, e)
   })
 
   // The same id `openPane` opens the Pane under.

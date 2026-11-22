@@ -33,11 +33,16 @@ export async function refresh($: EngineInterface): Promise<void> {
   await update($, snapshot, () => next)
 }
 
-/** The snapshot as last built, or null before the first one. */
+/**
+ * The snapshot as last built or, before the first one, a fresh one read from
+ * Claude Code. A Mod installed mid-session joins after `session.start` has
+ * passed, and a render hook may not write state, so it draws from a fresh read
+ * until the next refresh stores one.
+ */
 export async function readSnapshot(
   $: EngineInterface,
-): Promise<ControlsSnapshot | null> {
-  return read($, snapshot)
+): Promise<ControlsSnapshot> {
+  return (await read($, snapshot)) ?? buildSnapshot($)
 }
 
 /** The Pane control the Pane should open at, or null for the top. */
