@@ -8,6 +8,20 @@ Mods that change how Claude Code behaves and looks, made for the repo owner's ow
 A plugin that changes Claude Code's own interface or behaviour from inside the app.
 _Avoid_: extension, add-on
 
+**Marketplace**:
+This repo seen as the place Claude Code installs its Mods from.
+_Avoid_: registry, store
+
+### Where a Mod shows up
+
+**Band**:
+A single always-visible row above the prompt box.
+_Avoid_: bar, strip, header
+
+**Pane**:
+A panel beside the chat that is opened on demand and has room for full controls.
+_Avoid_: sidebar, drawer, panel
+
 ### Context control
 
 **Autocompact**:
