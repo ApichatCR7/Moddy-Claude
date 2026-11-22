@@ -14,7 +14,7 @@ import { buildSnapshot } from './snapshot'
 const snapshot = atom(
   { plugin: 'session-controls', key: 'snapshot' } as const,
   null,
-  { shape: 'snapshot-1' },
+  { shape: 'snapshot-2' },
 )
 
 // Claude Code's own words about the last change, shown beside its control.
@@ -30,8 +30,30 @@ const sessionAdvisor = atom(
   null,
 )
 
+/** The `$.store` key for the Advisor model the person last set. */
+const REMEMBERED_ADVISOR = 'advisor'
+
 /** How Claude Code's `/advisor` begins its answer when it made the change. */
 const ADVISOR_ACCEPTED = /^Advisor (set to|disabled)/i
+
+// Whether the Widget was opened this session.
+const isWidgetOpened = atom(
+  { plugin: 'session-controls', key: 'isWidgetOpened' } as const,
+  false,
+)
+
+/**
+ * True the first time it is asked in a session, false after: the Widget
+ * opens once, so one the person closed does not come back each turn.
+ */
+export async function claimWidgetOpening($: EngineInterface): Promise<boolean> {
+  if (await read($, isWidgetOpened)) {
+    return false
+  }
+  await update($, isWidgetOpened, () => true)
+
+  return true
+}
 
 // Which Pane control the Band asked the Pane to open at.
 const focus = atom({ plugin: 'session-controls', key: 'focus' } as const, null)
@@ -76,7 +98,20 @@ export async function noteAdvisorRun(
   if (named === '' || !ADVISOR_ACCEPTED.test(text.trim())) {
     return
   }
-  await update($, sessionAdvisor, () => advisorValue(named))
+  const model = advisorValue(named)
+
+  await update($, sessionAdvisor, () => model)
+  // Kept past the session: the next one starts by setting it again.
+  await $.store.set(REMEMBERED_ADVISOR, model)
+}
+
+/** The Advisor model last set in any session, or undefined for none. */
+export async function readRememberedAdvisor(
+  $: EngineInterface,
+): Promise<string | undefined> {
+  const model = await $.store.get(REMEMBERED_ADVISOR)
+
+  return typeof model === 'string' && model !== '' ? model : undefined
 }
 
 /** The Pane control the Pane should open at, or null for the top. */

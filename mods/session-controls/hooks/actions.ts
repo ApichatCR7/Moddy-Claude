@@ -1,8 +1,11 @@
 import type { EngineInterface } from 'claude-code'
 
 import { PANE_ID, PANE_TITLE } from './pane-id'
+import { readSavedAdvisor } from './snapshot'
 import {
+  claimWidgetOpening,
   noteAdvisorRun,
+  readRememberedAdvisor,
   readSnapshot,
   refresh,
   setFocus,
@@ -93,4 +96,31 @@ async function runCommand(
 
   await setNotice($, { section, text: text ?? '' })
   await refresh($)
+}
+
+/**
+ * Opens the Pane in its small form, the Widget, once per session. On a
+ * surface with no widgets it opens as the full Pane.
+ */
+export async function openWidget($: EngineInterface): Promise<void> {
+  if (!(await claimWidgetOpening($))) {
+    return
+  }
+  await $.ui.open({ id: PANE_ID, title: PANE_TITLE, placement: 'widget' })
+}
+
+/**
+ * Sets the remembered Advisor model again as a session starts: the desktop
+ * app keeps an `/advisor` change for one session only. Nothing runs when none
+ * is remembered or it is what the settings already say.
+ */
+export async function restoreAdvisor($: EngineInterface): Promise<void> {
+  const remembered = await readRememberedAdvisor($)
+
+  if (remembered === undefined || remembered === (await readSavedAdvisor($))) {
+    return
+  }
+  const { text } = await $.command.run({ command: 'advisor', args: remembered })
+
+  await noteAdvisorRun($, remembered, text ?? '')
 }

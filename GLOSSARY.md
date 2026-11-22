@@ -22,6 +22,10 @@ _Avoid_: bar, strip, header
 A panel beside the chat that is opened on demand and has room for full controls.
 _Avoid_: sidebar, drawer, panel
 
+**Widget**:
+The Pane in its small form on the desktop app, in a corner of the chat area, read at a glance rather than pressed.
+_Avoid_: icon, badge, mini pane
+
 ### Context control
 
 **Autocompact**:
@@ -31,10 +35,6 @@ _Avoid_: auto compact, auto-summary
 **Compact threshold**:
 The context size a model's Autocompact is set to (Claude Code calls it the "auto-compact window"). It is set separately for each model and shown in tokens and as a percentage of that model's context window. Compaction actually begins a little before it.
 _Avoid_: trigger point, limit
-
-**Context usage**:
-How full the context window is right now, as a percentage of the current model's context window.
-_Avoid_: context %, token usage
 
 **Locked**:
 The state of a control the Mod cannot change, because something outside it (an environment variable, an account that lacks the feature) decides the value.

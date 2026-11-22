@@ -27,6 +27,8 @@ export type EngineState = {
   advisorModel?: string
   /** Whether `/advisor` is offered at all (feature, account, provider). */
   isAdvisorOffered: boolean
+  /** What the Mod kept in `$.store` in earlier sessions. */
+  stored: Record<string, unknown>
   /** Environment variables the session was started with. */
   env: Record<string, string>
   /** A managed source owns the `autoCompact` row. */
@@ -71,6 +73,7 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
     autocompactSource: 'auto',
     isAdvisorOffered: true,
     env: {},
+    stored: {},
     isAutoCompactRowLocked: false,
     settleText: ACCEPTED,
     ...initial,
@@ -78,6 +81,7 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
   const calls: Call[] = []
 
   mock.env(on, state.env)
+  mock.store(on, state.stored)
 
   // Claude Code reports the effective state: an environment variable that
   // disables compaction wins over the saved setting.

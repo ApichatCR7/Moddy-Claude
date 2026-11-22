@@ -52,27 +52,33 @@ async function advisorLock($: EngineInterface): Promise<string | undefined> {
     : 'not available for this account or provider'
 }
 
+/** The Advisor model saved in settings, as a picker value (`off` for none). */
+export async function readSavedAdvisor($: EngineInterface): Promise<string> {
+  return advisorValue(
+    await attempt(() => $.settings.read({ key: 'advisorModel' })),
+  )
+}
+
 /**
  * Reads Claude Code once and says how things stand now. Every figure comes
  * from Claude Code; the Mod keeps no opinion of its own about any of them.
  *
- * Percentages are of the model's full context window (`context.window`), the
- * same basis as Context usage. The compaction window the engine measures its
- * own breakdown against is only ever read as a token count.
+ * Percentages are of the model's full context window (`context.window`). The
+ * compaction window the engine measures its own breakdown against is only
+ * ever read as a token count.
  */
 export async function buildSnapshot(
   $: EngineInterface,
 ): Promise<ControlsSnapshot> {
   const usage = await attempt(() => $.session.usage({ breakdown: 'summary' }))
   const rows = await attempt(() => $.config.list())
-  const advisor = await attempt(() => $.settings.read({ key: 'advisorModel' }))
+  const advisor = await readSavedAdvisor($)
   const row = rows?.find(one => one.key === 'autoCompact')
   const context = usage?.context
   const breakdown = context?.breakdown
 
   return {
     window: context?.window,
-    contextUsage: context?.percent,
     autocompact: {
       isOn: breakdown?.isAutoCompactEnabled ?? row?.value === true,
       lock: await autocompactLock($, row),
@@ -87,6 +93,6 @@ export async function buildSnapshot(
           ? 'set by CLAUDE_CODE_AUTO_COMPACT_WINDOW'
           : undefined,
     },
-    advisor: { model: advisorValue(advisor), lock: await advisorLock($) },
+    advisor: { model: advisor, lock: await advisorLock($) },
   }
 }

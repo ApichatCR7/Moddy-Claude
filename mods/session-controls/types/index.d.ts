@@ -4,8 +4,6 @@
 export type ControlsSnapshot = {
   /** The current model's full context window, in tokens. */
   window?: number
-  /** Context usage: whole percent of that window. Absent until a response. */
-  contextUsage?: number
   autocompact: { isOn: boolean; lock?: string }
   threshold: {
     /** The Compact threshold in tokens, as Claude Code's `/autocompact` sets it. */
@@ -37,6 +35,8 @@ declare module 'claude-code' {
        * the session only and offers no way to read it back.
        */
       sessionAdvisor: string | null
+      /** Whether the Widget was opened this session; it opens once, not each turn. */
+      isWidgetOpened: boolean
     }
   }
 }

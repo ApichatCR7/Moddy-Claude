@@ -1,36 +1,41 @@
 import { expect, test } from 'claude-code/testing'
 
 import { fakeEngine, measured, startSession, typed } from './engine'
+import type { Call } from './engine'
 import {
   BAND,
   PANE,
   PANE_ID,
+  WIDGET,
   bandText,
   chosenIn,
   lockedText as locked,
   optionsOf,
 } from './screen'
 
-test('the Band shows Context usage and the Advisor model', async ($, on) => {
+test('the Band shows Autocompact and the Advisor model, and no Context usage', async ($, on) => {
   fakeEngine(on, { contextUsage: 62, advisorModel: 'opus' })
   await startSession($)
-
   const ui = await $.ui.mount(BAND)
-  const band = await ui.find({ type: 'Box', key: 'band' })
 
-  expect(band?.text).toContain('Context: 62%')
-  expect(band?.text).toContain('Advisor: Opus')
+  const text = await bandText(ui)
+
+  expect(text).toContain('Autocompact: ON')
+  expect(text).toContain('Advisor: Opus')
+  expect(text).not.toContain('Context')
+  expect(text).not.toContain('62%')
   await ui.unmount()
 })
 
-test('the Band shows Autocompact on, with its Compact threshold in tokens and percent', async ($, on) => {
+test('the Band shows Autocompact ON or OFF only, without the Compact threshold', async ($, on) => {
   fakeEngine(on, { autoCompactWindow: 160_000, autocompactSource: 'settings' })
   await startSession($)
-
   const ui = await $.ui.mount(BAND)
-  const band = await ui.find({ type: 'Box', key: 'band' })
 
-  expect(band?.text).toContain('Autocompact: ON · 160k (80%)')
+  const text = await bandText(ui)
+
+  expect(text).toContain('Autocompact: ON')
+  expect(text).not.toContain('160k')
   await ui.unmount()
 })
 
@@ -110,19 +115,6 @@ test('a managed source that owns the autoCompact row makes Autocompact Locked', 
   await ui.unmount()
 })
 
-test('a session measure event with new usage updates the Band', async ($, on) => {
-  const engine = fakeEngine(on, { contextUsage: 62 })
-  await startSession($)
-  const ui = await $.ui.mount(BAND)
-  expect(await bandText(ui)).toContain('Context: 62%')
-
-  engine.state.contextUsage = 71
-  await $.session.measure(measured(71))
-
-  expect(await bandText(ui)).toContain('Context: 71%')
-  await ui.unmount()
-})
-
 test('a saved Advisor model changed elsewhere shows on the Band after the next turn', async ($, on) => {
   const engine = fakeEngine(on, { advisorModel: 'opus' })
   await startSession($)
@@ -132,18 +124,6 @@ test('a saved Advisor model changed elsewhere shows on the Band after the next t
   await $.session.measure(measured(10))
 
   expect(await bandText(ui)).toContain('Advisor: Sonnet')
-  await ui.unmount()
-})
-
-test('the Band keeps showing the settings while Context usage is not available yet', async ($, on) => {
-  fakeEngine(on, { contextUsage: undefined, advisorModel: 'opus' })
-  await startSession($)
-  const ui = await $.ui.mount(BAND)
-
-  const text = await bandText(ui)
-  expect(text).toContain('Context: —')
-  expect(text).toContain('Autocompact: ON')
-  expect(text).toContain('Advisor: Opus')
   await ui.unmount()
 })
 
@@ -203,7 +183,7 @@ test('on a 200k-window model none of 400k, 500k or 1M is offered', async ($, on)
   await ui.unmount()
 })
 
-test('picking 500k runs the autocompact command with 500000, and the Band shows 500k (50%)', async ($, on) => {
+test('picking 500k runs the autocompact command with 500000', async ($, on) => {
   const engine = fakeEngine(on, { window: 1_000_000 })
   await startSession($)
   const band = await $.ui.mount(BAND)
@@ -217,7 +197,6 @@ test('picking 500k runs the autocompact command with 500000, and the Band shows 
     args: '500000',
   })
   expect(await chosenIn(pane, 'threshold')).toBe('500k (50%)')
-  expect(await bandText(band)).toContain('Autocompact: ON · 500k (50%)')
   await pane.unmount()
   await band.unmount()
 })
@@ -412,7 +391,6 @@ test('percent and tokens are measured against the model window, not the compacti
   const band = await $.ui.mount(BAND)
   const pane = await $.ui.mount(PANE)
 
-  expect(await bandText(band)).toContain('Autocompact: ON · 400k (40%)')
   expect(await chosenIn(pane, 'threshold')).toBe('400k (40%)')
   await pane.unmount()
   await band.unmount()
@@ -441,7 +419,6 @@ test('the Band still shows Autocompact and the Advisor when usage is not availab
 
   const text = await bandText(ui)
   expect(text).toContain('Autocompact: ON')
-  expect(text).toContain('Context: —')
   expect(text).toContain('Advisor: Opus')
   await ui.unmount()
 })
@@ -495,7 +472,7 @@ test('the Band shows on a session the Mod joined after it started', async ($, on
 
   const text = await bandText(ui)
 
-  expect(text).toContain('Context: 62%')
+  expect(text).toContain('Autocompact: ON')
   expect(text).toContain('Advisor: Opus')
   await ui.unmount()
 })
@@ -583,13 +560,133 @@ test('a typed /advisor that Claude Code rejects leaves the Band as it was', asyn
   await ui.unmount()
 })
 
-test('typing /autocompact 500000 shows on the Band at once, with no turn', async ($, on) => {
+test('typing /autocompact 500000 shows in the Pane at once, with no turn', async ($, on) => {
   fakeEngine(on, { window: 1_000_000 })
   await startSession($)
-  const ui = await $.ui.mount(BAND)
+  const ui = await $.ui.mount(PANE)
 
   await $.command.run(typed('autocompact', '500000'))
 
-  expect(await bandText(ui)).toContain('Autocompact: ON · 500k (50%)')
+  expect(await chosenIn(ui, 'threshold')).toBe('500k (50%)')
   await ui.unmount()
+})
+
+// A Widget is the Pane's small form on the desktop app. Clicks may not reach
+// it, so it is drawn to be read at a glance, not pressed.
+test('the Pane drawn as a Widget shows Autocompact and the Advisor at a glance, with no controls', async ($, on) => {
+  fakeEngine(on, { advisorModel: 'opus' })
+  await startSession($)
+  const ui = await $.ui.mount(WIDGET)
+
+  const glance = await ui.find({ type: 'Box', key: 'widget' })
+
+  expect(glance?.text).toContain('Autocompact: ON · Advisor: Opus')
+  expect(await ui.find({ type: 'Select', key: 'threshold' })).toBeUndefined()
+  expect(await ui.find({ type: 'Select', key: 'advisor' })).toBeUndefined()
+  await ui.unmount()
+})
+
+const widgetOpens = (calls: Call[]) =>
+  calls.filter(one => one.call === 'ui.open' && one.pane.placement === 'widget')
+
+test('starting a session opens the Pane as a Widget', async ($, on) => {
+  const engine = fakeEngine(on)
+  await startSession($)
+
+  expect(widgetOpens(engine.calls)).toHaveLength(1)
+  expect(widgetOpens(engine.calls)[0]).toMatchObject({ pane: { id: PANE_ID } })
+})
+
+test('a Mod that joined after the session started opens the Widget after the next turn', async ($, on) => {
+  const engine = fakeEngine(on)
+
+  await $.session.measure(measured(10))
+
+  expect(widgetOpens(engine.calls)).toHaveLength(1)
+})
+
+test('the Widget opens once per session, so one the person closed does not come back each turn', async ($, on) => {
+  const engine = fakeEngine(on)
+  await startSession($)
+
+  await $.session.measure(measured(10))
+  await $.session.measure(measured(20))
+
+  expect(widgetOpens(engine.calls)).toHaveLength(1)
+})
+
+// The desktop app keeps an `/advisor` change for one session, so the Mod
+// remembers the Advisor model and sets it again when the next session starts.
+const advisorRuns = (calls: Call[]) =>
+  calls.filter(one => one.call === 'command.run' && one.command === 'advisor')
+
+test('an Advisor model picked in one session is set again when the next one starts', async ($, on) => {
+  const engine = fakeEngine(on)
+  await startSession($)
+  const pane = await $.ui.mount(PANE)
+  await pane.select({ key: 'advisor', value: 'opus' })
+  await pane.unmount()
+
+  // The next session: the desktop app has forgotten its session-only change.
+  engine.state.sessionAdvisor = undefined
+  engine.calls.length = 0
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([
+    { call: 'command.run', command: 'advisor', args: 'opus' },
+  ])
+  const band = await $.ui.mount(BAND)
+  expect(await bandText(band)).toContain('Advisor: Opus')
+  await band.unmount()
+})
+
+test('an Advisor model typed in one session is set again when the next one starts', async ($, on) => {
+  const engine = fakeEngine(on)
+  await startSession($)
+  await $.command.run(typed('advisor', 'sonnet'))
+
+  engine.state.sessionAdvisor = undefined
+  engine.calls.length = 0
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([
+    { call: 'command.run', command: 'advisor', args: 'sonnet' },
+  ])
+})
+
+test('Off picked in one session is set again when the next one starts, over a saved Advisor', async ($, on) => {
+  const engine = fakeEngine(on, { advisorModel: 'opus', stored: { advisor: 'off' } })
+
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([
+    { call: 'command.run', command: 'advisor', args: 'off' },
+  ])
+})
+
+test('with nothing remembered, starting a session runs no /advisor', async ($, on) => {
+  const engine = fakeEngine(on, { advisorModel: 'opus' })
+
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([])
+})
+
+test('a remembered Advisor that matches the saved setting is not set again', async ($, on) => {
+  const engine = fakeEngine(on, { advisorModel: 'opus', stored: { advisor: 'opus' } })
+
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([])
+})
+
+test('a rejected Advisor model is not remembered', async ($, on) => {
+  const engine = fakeEngine(on, { advisorRejection: 'Sonnet cannot advise Opus.' })
+  await startSession($)
+  await $.command.run(typed('advisor', 'sonnet'))
+
+  engine.calls.length = 0
+  await startSession($)
+
+  expect(advisorRuns(engine.calls)).toEqual([])
 })
