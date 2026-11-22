@@ -22,10 +22,6 @@ _Avoid_: bar, strip, header
 A panel beside the chat that is opened on demand and has room for full controls.
 _Avoid_: sidebar, drawer, panel
 
-**Widget**:
-The Pane in its small form on the desktop app, in a corner of the chat area, read at a glance rather than pressed.
-_Avoid_: icon, badge, mini pane
-
 ### Context control
 
 **Autocompact**:

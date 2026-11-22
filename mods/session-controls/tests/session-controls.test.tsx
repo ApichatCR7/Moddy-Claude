@@ -6,7 +6,6 @@ import {
   BAND,
   PANE,
   PANE_ID,
-  WIDGET,
   bandText,
   chosenIn,
   lockedText as locked,
@@ -571,48 +570,17 @@ test('typing /autocompact 500000 shows in the Pane at once, with no turn', async
   await ui.unmount()
 })
 
-// A Widget is the Pane's small form on the desktop app. Clicks may not reach
-// it, so it is drawn to be read at a glance, not pressed.
-test('the Pane drawn as a Widget shows Autocompact and the Advisor at a glance, with no controls', async ($, on) => {
-  fakeEngine(on, { advisorModel: 'opus' })
-  await startSession($)
-  const ui = await $.ui.mount(WIDGET)
+// The Pane opens when the person asks for it, never by itself: a desktop app
+// without widgets would open it full size beside every new chat.
+const paneOpens = (calls: Call[]) => calls.filter(one => one.call === 'ui.open')
 
-  const glance = await ui.find({ type: 'Box', key: 'widget' })
-
-  expect(glance?.text).toContain('Autocompact: ON · Advisor: Opus')
-  expect(await ui.find({ type: 'Select', key: 'threshold' })).toBeUndefined()
-  expect(await ui.find({ type: 'Select', key: 'advisor' })).toBeUndefined()
-  await ui.unmount()
-})
-
-const widgetOpens = (calls: Call[]) =>
-  calls.filter(one => one.call === 'ui.open' && one.pane.placement === 'widget')
-
-test('starting a session opens the Pane as a Widget', async ($, on) => {
-  const engine = fakeEngine(on)
-  await startSession($)
-
-  expect(widgetOpens(engine.calls)).toHaveLength(1)
-  expect(widgetOpens(engine.calls)[0]).toMatchObject({ pane: { id: PANE_ID } })
-})
-
-test('a Mod that joined after the session started opens the Widget after the next turn', async ($, on) => {
-  const engine = fakeEngine(on)
-
-  await $.session.measure(measured(10))
-
-  expect(widgetOpens(engine.calls)).toHaveLength(1)
-})
-
-test('the Widget opens once per session, so one the person closed does not come back each turn', async ($, on) => {
+test('starting a session opens no Pane by itself', async ($, on) => {
   const engine = fakeEngine(on)
   await startSession($)
 
   await $.session.measure(measured(10))
-  await $.session.measure(measured(20))
 
-  expect(widgetOpens(engine.calls)).toHaveLength(1)
+  expect(paneOpens(engine.calls)).toEqual([])
 })
 
 // The desktop app keeps an `/advisor` change for one session, so the Mod

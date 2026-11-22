@@ -35,8 +35,6 @@ declare module 'claude-code' {
        * the session only and offers no way to read it back.
        */
       sessionAdvisor: string | null
-      /** Whether the Widget was opened this session; it opens once, not each turn. */
-      isWidgetOpened: boolean
     }
   }
 }

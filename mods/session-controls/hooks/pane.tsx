@@ -1,21 +1,10 @@
 import type { EngineInterface, RenderInput } from 'claude-code'
 
 import { pickAdvisor, pickThreshold, toggleAutocompact } from './actions'
-import { advisorChoice, advisorLabel } from './advisors'
+import { advisorChoice } from './advisors'
 import { formatLocked, formatOnOff, formatThreshold } from './format'
 import { readFocus, readNotice, readSnapshot } from './state'
-import type { ControlsSnapshot } from '../types'
 import { thresholdChoice } from './threshold'
-
-/** One line for the Widget: `Autocompact: ON · Advisor: Opus`, 🔒 where Locked. */
-function glance(state: ControlsSnapshot): string {
-  const lock = (reason: string | undefined) => (reason === undefined ? '' : ' 🔒')
-
-  return [
-    `Autocompact: ${formatOnOff(state.autocompact.isOn)}${lock(state.autocompact.lock)}`,
-    `Advisor: ${advisorLabel(state.advisor.model)}${lock(state.advisor.lock)}`,
-  ].join(' · ')
-}
 
 export async function drawPane(
   $: EngineInterface,
@@ -23,16 +12,6 @@ export async function drawPane(
 ) {
   const { Box, Button, Select, Text } = $.ui.resolve(e)
   const state = await readSnapshot($)
-
-  // The Widget, the Pane's small form: read at a glance, since clicks may not
-  // reach it. Expanding it shows the full controls below.
-  if (e.props.placement === 'widget') {
-    return (
-      <Box key="widget">
-        <Text>{glance(state)}</Text>
-      </Box>
-    )
-  }
   const notice = await readNotice($)
   const focus = await readFocus($)
 

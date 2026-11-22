@@ -3,7 +3,6 @@ import type { EngineInterface } from 'claude-code'
 import { PANE_ID, PANE_TITLE } from './pane-id'
 import { readSavedAdvisor } from './snapshot'
 import {
-  claimWidgetOpening,
   noteAdvisorRun,
   readRememberedAdvisor,
   readSnapshot,
@@ -96,17 +95,6 @@ async function runCommand(
 
   await setNotice($, { section, text: text ?? '' })
   await refresh($)
-}
-
-/**
- * Opens the Pane in its small form, the Widget, once per session. On a
- * surface with no widgets it opens as the full Pane.
- */
-export async function openWidget($: EngineInterface): Promise<void> {
-  if (!(await claimWidgetOpening($))) {
-    return
-  }
-  await $.ui.open({ id: PANE_ID, title: PANE_TITLE, placement: 'widget' })
 }
 
 /**

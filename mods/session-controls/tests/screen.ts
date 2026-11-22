@@ -36,12 +36,6 @@ export const PANE = {
   },
 } as const
 
-/** The Pane in its small form on the desktop app, in the chat area's corner. */
-export const WIDGET = {
-  ...PANE,
-  props: { ...PANE.props, placement: 'widget', anchoredEdges: ['bottom', 'right'] },
-} as const
-
 type Mounted = { find: (query: ElementQuery) => Promise<FoundElement | undefined> }
 type Option = { value: string; label?: string }
 

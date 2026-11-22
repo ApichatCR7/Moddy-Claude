@@ -1,6 +1,6 @@
 import type { Register } from 'claude-code'
 
-import { openWidget, restoreAdvisor } from './actions'
+import { restoreAdvisor } from './actions'
 import { drawBand } from './band'
 import { drawPane } from './pane'
 import { noteAdvisorRun, refresh, setNotice } from './state'
@@ -11,7 +11,6 @@ export const register: Register = on => {
     const started = await next(e)
     await restoreAdvisor($)
     await refresh($)
-    await openWidget($)
 
     return started
   })
@@ -23,8 +22,6 @@ export const register: Register = on => {
     // Claude Code's words about an earlier change may be stale by now.
     await setNotice($, null)
     await refresh($)
-    // A Mod installed mid-session missed `session.start`: open it now.
-    await openWidget($)
 
     return measured
   })

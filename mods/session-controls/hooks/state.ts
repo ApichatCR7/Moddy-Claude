@@ -36,25 +36,6 @@ const REMEMBERED_ADVISOR = 'advisor'
 /** How Claude Code's `/advisor` begins its answer when it made the change. */
 const ADVISOR_ACCEPTED = /^Advisor (set to|disabled)/i
 
-// Whether the Widget was opened this session.
-const isWidgetOpened = atom(
-  { plugin: 'session-controls', key: 'isWidgetOpened' } as const,
-  false,
-)
-
-/**
- * True the first time it is asked in a session, false after: the Widget
- * opens once, so one the person closed does not come back each turn.
- */
-export async function claimWidgetOpening($: EngineInterface): Promise<boolean> {
-  if (await read($, isWidgetOpened)) {
-    return false
-  }
-  await update($, isWidgetOpened, () => true)
-
-  return true
-}
-
 // Which Pane control the Band asked the Pane to open at.
 const focus = atom({ plugin: 'session-controls', key: 'focus' } as const, null)
 
