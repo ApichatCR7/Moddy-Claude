@@ -1,6 +1,6 @@
 import type { EngineInterface } from 'claude-code'
 
-import { toggleAutocompact } from './actions'
+import { openPane, toggleAutocompact } from './actions'
 import { advisorLabel } from './advisors'
 import { formatThreshold } from './format'
 import { readSnapshot } from './state'
@@ -39,7 +39,16 @@ export async function drawBand(
         </Text>
       )}
       <Text>Context: {context}</Text>
-      <Text>Advisor: {advisorLabel(state.advisor.model)}</Text>
+      {state.advisor.lock === undefined ? (
+        <Button
+          key="advisor"
+          label={`Advisor: ${advisorLabel(state.advisor.model)}`}
+          onPress={() => openPane($, 'advisor')}
+        />
+      ) : (
+        <Text>Advisor: 🔒 {state.advisor.lock}</Text>
+      )}
+      <Button key="pane" label="⚙" onPress={() => openPane($, null)} />
     </Box>
   )
 }

@@ -4,6 +4,7 @@
 // the few ways the Mod can observe, so a test can change something, then look
 // at what the user sees. Nothing here knows how the Mod is built.
 import { mock } from 'claude-code/testing'
+import type { Engine } from 'claude-code/testing'
 import type {
   CommandInfo,
   ConfigRow,
@@ -30,6 +31,8 @@ export type EngineState = {
   env: Record<string, string>
   /** A managed source owns the `autoCompact` row. */
   isAutoCompactRowLocked: boolean
+  /** `session.usage` fails, as it does where no session is bound yet. */
+  isUsageUnavailable?: boolean
   /** What `config.set` answers for `autoCompact` instead of accepting. */
   configDeny?: string
   /** What `/advisor <model>` answers instead of accepting. */
@@ -75,9 +78,13 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
     state.env.DISABLE_COMPACT === undefined
 
   on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('session.measure', (_, e) => ({ changed: e.changed }))
 
   on('session.usage', (_, e) => {
     calls.push({ call: 'session.usage', breakdown: e.breakdown })
+    if (state.isUsageUnavailable === true) {
+      throw new Error('no session bound')
+    }
     const tokens =
       state.contextPercent === undefined
         ? undefined
@@ -193,3 +200,14 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
 
   return { state, calls }
 }
+
+/** Starts the session as the desktop app does. */
+export const startSession = ($: Engine) =>
+  $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+
+/** The event Claude Code raises after a main turn, with new Context usage. */
+export const measured = (percent: number) => ({
+  context: { window: 200_000, percent },
+  rateLimits: [],
+  changed: ['context' as const],
+})
