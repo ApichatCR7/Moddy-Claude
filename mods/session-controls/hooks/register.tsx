@@ -2,7 +2,7 @@ import type { Register } from 'claude-code'
 
 import { drawBand } from './band'
 import { drawPane } from './pane'
-import { refresh, setNotice } from './state'
+import { noteAdvisorRun, refresh, setNotice } from './state'
 
 export const register: Register = on => {
   // So the Band is right before the first message.
@@ -22,6 +22,23 @@ export const register: Register = on => {
     await refresh($)
 
     return measured
+  })
+
+  // A slash command runs no turn, so `session.measure` would not catch it:
+  // the Band shows what `/advisor` or `/autocompact` did as soon as it ran.
+  on('command.run', { command: 'advisor' }, async ($, e, next) => {
+    const result = await next(e)
+    await noteAdvisorRun($, e.args, result.text ?? '')
+    await refresh($)
+
+    return result
+  })
+
+  on('command.run', { command: 'autocompact' }, async ($, e, next) => {
+    const result = await next(e)
+    await refresh($)
+
+    return result
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

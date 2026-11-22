@@ -1,8 +1,13 @@
 import type { EngineInterface } from 'claude-code'
 
 import { PANE_ID, PANE_TITLE } from './pane-id'
-import { readSnapshot, refresh, setFocus, setNotice } from './state'
-import { tokensFor } from './threshold'
+import {
+  noteAdvisorRun,
+  readSnapshot,
+  refresh,
+  setFocus,
+  setNotice,
+} from './state'
 
 // Every change goes through Claude Code's own channels and is saved by it for
 // all future sessions. The Mod never writes a settings file. After each action
@@ -42,23 +47,18 @@ export async function openPane(
 }
 
 /**
- * Sets the Compact threshold for the model in use now: `auto`, or a percent of
- * that model's full window, which Claude Code's `/autocompact` takes in tokens.
- * Claude Code saves it per model and applies it to this session at once.
+ * Sets the Compact threshold for the model in use now: a token count such as
+ * `500000`, as Claude Code's `/autocompact` takes it. Claude Code saves it per
+ * model and applies it to this session at once.
  */
 export async function pickThreshold(
   $: EngineInterface,
   value: string,
 ): Promise<void> {
-  const state = await readSnapshot($)
-
-  if (state.window === undefined || value === 'current') {
+  if (value === 'current' || value === 'auto') {
     return
   }
-  const args =
-    value === 'auto' ? 'auto' : String(tokensFor(Number(value), state.window))
-
-  await runCommand($, 'threshold', 'autocompact', args)
+  await runCommand($, 'threshold', 'autocompact', value)
 }
 
 /**
@@ -86,6 +86,10 @@ async function runCommand(
 ): Promise<void> {
   await setNotice($, null)
   const { text } = await $.command.run({ command, args })
+
+  if (command === 'advisor') {
+    await noteAdvisorRun($, args, text ?? '')
+  }
 
   await setNotice($, { section, text: text ?? '' })
   await refresh($)

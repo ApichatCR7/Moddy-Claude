@@ -35,6 +35,11 @@ export type EngineState = {
   isUsageUnavailable?: boolean
   /** What `config.set` answers for `autoCompact` instead of accepting. */
   configDeny?: string
+  /**
+   * The Advisor this session uses after `/advisor`, which the desktop app
+   * keeps for the session only. Claude Code offers the Mod no way to read it.
+   */
+  sessionAdvisor?: string
   /** What `/advisor <model>` answers instead of accepting. */
   advisorRejection?: string
   /** What Claude Code says when it accepts a change. */
@@ -50,6 +55,10 @@ export type Call =
 
 /** Where Claude Code starts compacting sits this far below its compaction window. */
 const RESERVED_BELOW_WINDOW = 33_000
+
+/** How the desktop app's `/advisor` ends its answer. */
+const FOR_THIS_SESSION =
+  ' for this session \u2014 run /advisor in the terminal to change your default'
 
 /** Claude Code's own words, as the fake engine answers. */
 export const ACCEPTED = 'Claude Code accepted that.'
@@ -175,12 +184,22 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
     }
 
     if (e.command === 'advisor') {
+      if (e.args === '') {
+        return { text: `Advisor: ${state.sessionAdvisor ?? state.advisorModel ?? 'off'}` }
+      }
       if (state.advisorRejection !== undefined) {
         return { text: state.advisorRejection }
       }
-      state.advisorModel = e.args === 'off' ? undefined : e.args
+      // As on the desktop app: the Advisor changes for this session only and
+      // the saved `advisorModel` setting stays as it was.
+      state.sessionAdvisor = e.args
 
-      return { text: state.settleText }
+      return {
+        text:
+          e.args === 'off'
+            ? `Advisor disabled${FOR_THIS_SESSION}`
+            : `Advisor set to ${e.args[0]?.toUpperCase()}${e.args.slice(1)} 5.5${FOR_THIS_SESSION}`,
+      }
     }
 
     return { text: '' }
@@ -210,4 +229,12 @@ export const measured = (percent: number) => ({
   context: { window: 200_000, percent },
   rateLimits: [],
   changed: ['context' as const],
+})
+
+/** A slash command as the person types it in the desktop app's prompt box. */
+export const typed = (command: string, args: string) => ({
+  command,
+  args,
+  origin: { kind: 'composer' as const },
+  presentation: { isFullscreen: false, columns: 120 },
 })

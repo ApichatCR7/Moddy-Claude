@@ -1,6 +1,8 @@
-/** 160000 -> `160k`. */
+/** 160000 -> `160k`, 1000000 -> `1M`. */
 export const formatTokens = (tokens: number): string =>
-  `${Math.round(tokens / 1000)}k`
+  tokens >= 1_000_000 && tokens % 100_000 === 0
+    ? `${tokens / 1_000_000}M`
+    : `${Math.round(tokens / 1000)}k`
 
 /** Whole percent of the model's full context window, never past 100. */
 export const percentOf = (tokens: number, window: number): number =>

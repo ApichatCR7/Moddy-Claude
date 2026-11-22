@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { ControlsNotice, ControlsSnapshot } from '../types'
+import { advisorValue } from './advisors'
 import { buildSnapshot } from './snapshot'
 
 // Every read and write of the Mod's session state lives in this file: the
@@ -23,6 +24,15 @@ const notice = atom(
   { shape: 'notice-1' },
 )
 
+// The Advisor this session uses, once an `/advisor` was accepted.
+const sessionAdvisor = atom(
+  { plugin: 'session-controls', key: 'sessionAdvisor' } as const,
+  null,
+)
+
+/** How Claude Code's `/advisor` begins its answer when it made the change. */
+const ADVISOR_ACCEPTED = /^Advisor (set to|disabled)/i
+
 // Which Pane control the Band asked the Pane to open at.
 const focus = atom({ plugin: 'session-controls', key: 'focus' } as const, null)
 
@@ -42,7 +52,31 @@ export async function refresh($: EngineInterface): Promise<void> {
 export async function readSnapshot(
   $: EngineInterface,
 ): Promise<ControlsSnapshot> {
-  return (await read($, snapshot)) ?? buildSnapshot($)
+  const base = (await read($, snapshot)) ?? (await buildSnapshot($))
+  const advisor = await read($, sessionAdvisor)
+
+  // The saved setting says nothing about a change made for this session only.
+  return advisor === null
+    ? base
+    : { ...base, advisor: { ...base.advisor, model: advisor } }
+}
+
+/**
+ * Notes what an `/advisor` run did to this session, whoever typed it: the
+ * model it named, once Claude Code's answer says the change was made. A bare
+ * `/advisor` only asks, and a rejection changes nothing.
+ */
+export async function noteAdvisorRun(
+  $: EngineInterface,
+  args: string,
+  text: string,
+): Promise<void> {
+  const named = args.trim()
+
+  if (named === '' || !ADVISOR_ACCEPTED.test(text.trim())) {
+    return
+  }
+  await update($, sessionAdvisor, () => advisorValue(named))
 }
 
 /** The Pane control the Pane should open at, or null for the top. */

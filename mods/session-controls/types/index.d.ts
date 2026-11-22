@@ -31,6 +31,12 @@ declare module 'claude-code' {
       notice: Shaped<ControlsNotice | null>
       /** Which Pane control the Band asked the Pane to open at. */
       focus: 'advisor' | null
+      /**
+       * The Advisor this session uses after an `/advisor` Claude Code
+       * accepted, or null for none yet. The desktop app keeps that change for
+       * the session only and offers no way to read it back.
+       */
+      sessionAdvisor: string | null
     }
   }
 }

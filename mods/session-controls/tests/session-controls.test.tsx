@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { fakeEngine, measured, startSession } from './engine'
+import { fakeEngine, measured, startSession, typed } from './engine'
 import {
   BAND,
   PANE,
@@ -123,7 +123,7 @@ test('a session measure event with new usage updates the Band', async ($, on) =>
   await ui.unmount()
 })
 
-test('a change made by typing /advisor shows on the Band after the next turn', async ($, on) => {
+test('a saved Advisor model changed elsewhere shows on the Band after the next turn', async ($, on) => {
   const engine = fakeEngine(on, { advisorModel: 'opus' })
   await startSession($)
   const ui = await $.ui.mount(BAND)
@@ -175,102 +175,69 @@ test('tapping Advisor on the Band opens the Pane and asks for focus on the Advis
   await ui.unmount()
 })
 
-test('on a 200k-window model the Pane offers Auto and 50% to 90%, each as tokens and percent', async ($, on) => {
+test('on a 1M-window model the Pane offers 400k, 500k and 1M, each as tokens and percent', async ($, on) => {
+  fakeEngine(on, { window: 1_000_000, autoCompactWindow: 500_000, autocompactSource: 'settings' })
+  await startSession($)
+  const ui = await $.ui.mount(PANE)
+
+  expect(await optionsOf(ui, 'threshold')).toEqual(['400k (40%)', '500k (50%)', '1M (100%)'])
+  expect(await chosenIn(ui, 'threshold')).toBe('500k (50%)')
+  await ui.unmount()
+})
+
+test('options larger than the model window are left out', async ($, on) => {
+  fakeEngine(on, { window: 500_000, autoCompactWindow: 400_000, autocompactSource: 'settings' })
+  await startSession($)
+  const ui = await $.ui.mount(PANE)
+
+  expect(await optionsOf(ui, 'threshold')).toEqual(['400k (80%)', '500k (100%)'])
+  await ui.unmount()
+})
+
+test('on a 200k-window model none of 400k, 500k or 1M is offered', async ($, on) => {
   fakeEngine(on, { window: 200_000 })
   await startSession($)
   const ui = await $.ui.mount(PANE)
 
-  expect(await optionsOf(ui, 'threshold')).toEqual([
-    'Auto',
-    '100k (50%)',
-    '120k (60%)',
-    '140k (70%)',
-    '160k (80%)',
-    '180k (90%)',
-  ])
+  expect(await optionsOf(ui, 'threshold')).toEqual(['Auto'])
   await ui.unmount()
 })
 
-test('on a 200k-window model no option below 50% is offered', async ($, on) => {
-  fakeEngine(on, { window: 200_000 })
-  await startSession($)
-  const ui = await $.ui.mount(PANE)
-
-  const percents = (await optionsOf(ui, 'threshold'))
-    .map(label => /\((\d+)%\)/.exec(label ?? '')?.[1])
-    .filter(percent => percent !== undefined)
-    .map(Number)
-
-  expect(Math.min(...percents)).toBe(50)
-  await ui.unmount()
-})
-
-test('options whose token count is below the 100k minimum are left out', async ($, on) => {
-  fakeEngine(on, { window: 150_000, autoCompactWindow: 150_000 })
-  await startSession($)
-  const ui = await $.ui.mount(PANE)
-
-  expect(await optionsOf(ui, 'threshold')).toEqual([
-    'Auto',
-    '105k (70%)',
-    '120k (80%)',
-    '135k (90%)',
-  ])
-  await ui.unmount()
-})
-
-test('on a 200k-window model, picking 80% runs the autocompact command with 160000', async ($, on) => {
-  const engine = fakeEngine(on, { window: 200_000 })
-  await startSession($)
-  const ui = await $.ui.mount(PANE)
-
-  await ui.select({ key: 'threshold', value: '80' })
-
-  expect(engine.calls).toContainEqual({
-    call: 'command.run',
-    command: 'autocompact',
-    args: '160000',
-  })
-  expect(await chosenIn(ui, 'threshold')).toBe('160k (80%)')
-  await ui.unmount()
-})
-
-test('after picking 80% the Band shows 160k (80%), the figure the person picked', async ($, on) => {
-  fakeEngine(on, { window: 200_000 })
+test('picking 500k runs the autocompact command with 500000, and the Band shows 500k (50%)', async ($, on) => {
+  const engine = fakeEngine(on, { window: 1_000_000 })
   await startSession($)
   const band = await $.ui.mount(BAND)
   const pane = await $.ui.mount(PANE)
 
-  await pane.select({ key: 'threshold', value: '80' })
-
-  expect(await bandText(band)).toContain('Autocompact: ON · 160k (80%)')
-  await pane.unmount()
-  await band.unmount()
-})
-
-test('picking Auto runs the autocompact command with auto', async ($, on) => {
-  const engine = fakeEngine(on, { autoCompactWindow: 160_000, autocompactSource: 'settings' })
-  await startSession($)
-  const ui = await $.ui.mount(PANE)
-  expect(await chosenIn(ui, 'threshold')).toBe('160k (80%)')
-
-  await ui.select({ key: 'threshold', value: 'auto' })
+  await pane.select({ key: 'threshold', value: '500000' })
 
   expect(engine.calls).toContainEqual({
     call: 'command.run',
     command: 'autocompact',
-    args: 'auto',
+    args: '500000',
   })
+  expect(await chosenIn(pane, 'threshold')).toBe('500k (50%)')
+  expect(await bandText(band)).toContain('Autocompact: ON · 500k (50%)')
+  await pane.unmount()
+  await band.unmount()
+})
+
+test("while Claude Code's default applies, the Pane shows Auto as the current value but offers only 400k, 500k and 1M", async ($, on) => {
+  fakeEngine(on, { window: 1_000_000 })
+  await startSession($)
+  const ui = await $.ui.mount(PANE)
+
+  expect(await optionsOf(ui, 'threshold')).toEqual(['400k (40%)', '500k (50%)', '1M (100%)', 'Auto'])
   expect(await chosenIn(ui, 'threshold')).toBe('Auto')
   await ui.unmount()
 })
 
 test('a threshold set earlier that is not one of the options is still shown as the current value', async ($, on) => {
-  fakeEngine(on, { autoCompactWindow: 123_000, autocompactSource: 'settings' })
+  fakeEngine(on, { window: 1_000_000, autoCompactWindow: 123_000, autocompactSource: 'settings' })
   await startSession($)
   const ui = await $.ui.mount(PANE)
 
-  expect(await chosenIn(ui, 'threshold')).toBe('123k (62%)')
+  expect(await chosenIn(ui, 'threshold')).toBe('123k (12%)')
   await ui.unmount()
 })
 
@@ -436,7 +403,7 @@ test('the Pane opened from the Advisor segment starts on the Advisor picker, and
 })
 
 test('percent and tokens are measured against the model window, not the compaction window', async ($, on) => {
-  const engine = fakeEngine(on, {
+  fakeEngine(on, {
     window: 1_000_000,
     autoCompactWindow: 400_000,
     autocompactSource: 'settings',
@@ -446,24 +413,7 @@ test('percent and tokens are measured against the model window, not the compacti
   const pane = await $.ui.mount(PANE)
 
   expect(await bandText(band)).toContain('Autocompact: ON · 400k (40%)')
-  expect(await optionsOf(pane, 'threshold')).toEqual([
-    'Auto',
-    '500k (50%)',
-    '600k (60%)',
-    '700k (70%)',
-    '800k (80%)',
-    '900k (90%)',
-    // The 400k set earlier is none of the options: it is added as the current one.
-    '400k (40%)',
-  ])
   expect(await chosenIn(pane, 'threshold')).toBe('400k (40%)')
-
-  await pane.select({ key: 'threshold', value: '70' })
-  expect(engine.calls).toContainEqual({
-    call: 'command.run',
-    command: 'autocompact',
-    args: '700000',
-  })
   await pane.unmount()
   await band.unmount()
 })
@@ -551,10 +501,10 @@ test('the Band shows on a session the Mod joined after it started', async ($, on
 })
 
 test('the Pane offers its controls on a session the Mod joined after it started', async ($, on) => {
-  fakeEngine(on, { window: 200_000 })
+  fakeEngine(on, { window: 1_000_000 })
   const ui = await $.ui.mount(PANE)
 
-  expect(await optionsOf(ui, 'threshold')).toContain('160k (80%)')
+  expect(await optionsOf(ui, 'threshold')).toContain('500k (50%)')
   await ui.unmount()
 })
 
@@ -570,5 +520,76 @@ test('tapping Autocompact works on a session the Mod joined after it started', a
     value: false,
   })
   expect(await bandText(ui)).toContain('Autocompact: OFF')
+  await ui.unmount()
+})
+
+// On the desktop app `/advisor` changes the Advisor for this session only and
+// leaves the saved setting alone, so the Mod must not read the setting back.
+test('on desktop, an Advisor model picked in the Pane shows on the Band', async ($, on) => {
+  fakeEngine(on)
+  await startSession($)
+  const band = await $.ui.mount(BAND)
+  const pane = await $.ui.mount(PANE)
+
+  await pane.select({ key: 'advisor', value: 'opus' })
+
+  expect(await bandText(band)).toContain('Advisor: Opus')
+  expect(await chosenIn(pane, 'advisor')).toBe('Opus')
+  await pane.unmount()
+  await band.unmount()
+})
+
+test('typing /advisor opus shows on the Band at once, with no turn', async ($, on) => {
+  fakeEngine(on)
+  await startSession($)
+  const ui = await $.ui.mount(BAND)
+
+  await $.command.run(typed('advisor', 'opus'))
+
+  expect(await bandText(ui)).toContain('Advisor: Opus')
+  await ui.unmount()
+})
+
+test('typing /advisor off after Opus shows Off on the Band', async ($, on) => {
+  fakeEngine(on, { advisorModel: 'opus' })
+  await startSession($)
+  const ui = await $.ui.mount(BAND)
+
+  await $.command.run(typed('advisor', 'off'))
+
+  expect(await bandText(ui)).toContain('Advisor: Off')
+  await ui.unmount()
+})
+
+test('typing /advisor alone, which only asks, changes nothing on the Band', async ($, on) => {
+  fakeEngine(on, { advisorModel: 'opus' })
+  await startSession($)
+  const ui = await $.ui.mount(BAND)
+
+  await $.command.run(typed('advisor', ''))
+
+  expect(await bandText(ui)).toContain('Advisor: Opus')
+  await ui.unmount()
+})
+
+test('a typed /advisor that Claude Code rejects leaves the Band as it was', async ($, on) => {
+  fakeEngine(on, { advisorModel: 'opus', advisorRejection: 'Sonnet cannot advise Opus.' })
+  await startSession($)
+  const ui = await $.ui.mount(BAND)
+
+  await $.command.run(typed('advisor', 'sonnet'))
+
+  expect(await bandText(ui)).toContain('Advisor: Opus')
+  await ui.unmount()
+})
+
+test('typing /autocompact 500000 shows on the Band at once, with no turn', async ($, on) => {
+  fakeEngine(on, { window: 1_000_000 })
+  await startSession($)
+  const ui = await $.ui.mount(BAND)
+
+  await $.command.run(typed('autocompact', '500000'))
+
+  expect(await bandText(ui)).toContain('Autocompact: ON · 500k (50%)')
   await ui.unmount()
 })
