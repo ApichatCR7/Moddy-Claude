@@ -1,0 +1,11 @@
+{
+  "name": "moddy-claude",
+  "owner": { "name": "ApichatCR7" },
+  "plugins": [
+    {
+      "name": "session-controls",
+      "source": "./mods/session-controls",
+      "description": "A Band and a Pane for Autocompact, Compact threshold, Context usage and the Advisor."
+    }
+  ]
+}
