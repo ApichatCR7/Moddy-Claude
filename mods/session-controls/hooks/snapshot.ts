@@ -72,7 +72,7 @@ export async function buildSnapshot(
 
   return {
     window: context?.window,
-    contextPercent: context?.percent,
+    contextUsage: context?.percent,
     autocompact: {
       isOn: breakdown?.isAutoCompactEnabled ?? row?.value === true,
       lock: await autocompactLock($, row),

@@ -2,7 +2,7 @@ import type { ControlsSnapshot } from '../types'
 import { formatThreshold } from './format'
 
 /** Claude Code refuses an Autocompact window under this many tokens. */
-export const MINIMUM_TOKENS = 100_000
+const MINIMUM_TOKENS = 100_000
 
 const PERCENTS = [50, 60, 70, 80, 90] as const
 
@@ -19,7 +19,7 @@ export const tokensFor = (percent: number, window: number): number =>
   Math.round((percent / 100) * window)
 
 /** Auto, then each percent whose token count Claude Code would accept. */
-export function thresholdOptions(window: number): ThresholdOption[] {
+function thresholdOptions(window: number): ThresholdOption[] {
   const listed = PERCENTS.map(percent => ({
     percent,
     tokens: tokensFor(percent, window),

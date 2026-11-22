@@ -1,6 +1,6 @@
 // The Advisor models the Mod offers. It does not encode which one may advise
 // which main model: Claude Code decides that and says so when it refuses.
-export const ADVISOR_MODELS = [
+const ADVISOR_MODELS = [
   { value: 'fable', label: 'Fable' },
   { value: 'opus', label: 'Opus' },
   { value: 'sonnet', label: 'Sonnet' },

@@ -1,13 +1,13 @@
-import type { EngineInterface } from 'claude-code'
+import type { EngineInterface, RenderInput } from 'claude-code'
 
 import { openPane, toggleAutocompact } from './actions'
 import { advisorLabel } from './advisors'
-import { formatThreshold } from './format'
+import { formatLocked, formatOnOff, formatThreshold } from './format'
 import { readSnapshot } from './state'
 
 export async function drawBand(
   $: EngineInterface,
-  e: Parameters<EngineInterface['ui']['resolve']>[0],
+  e: RenderInput<'AbovePrompt'>,
 ) {
   const { Box, Button, Text } = $.ui.resolve(e)
   const state = await readSnapshot($)
@@ -16,14 +16,13 @@ export async function drawBand(
     return null
   }
   const context =
-    state.contextPercent === undefined ? '—' : `${state.contextPercent}%`
+    state.contextUsage === undefined ? '—' : `${state.contextUsage}%`
   const { tokens } = state.threshold
   const threshold =
     state.autocompact.isOn && tokens !== undefined && state.window !== undefined
       ? ` · ${formatThreshold(tokens, state.window)}`
       : ''
-
-  const autocompact = `Autocompact: ${state.autocompact.isOn ? 'ON' : 'OFF'}`
+  const autocompact = `Autocompact: ${formatOnOff(state.autocompact.isOn)}`
 
   return (
     <Box key="band" flexDirection="row" flexWrap="wrap" columnGap={3}>
@@ -34,9 +33,7 @@ export async function drawBand(
           onPress={() => toggleAutocompact($)}
         />
       ) : (
-        <Text>
-          {autocompact} 🔒 {state.autocompact.lock}
-        </Text>
+        <Text>{formatLocked(autocompact, state.autocompact.lock)}</Text>
       )}
       <Text>Context: {context}</Text>
       {state.advisor.lock === undefined ? (
@@ -46,7 +43,7 @@ export async function drawBand(
           onPress={() => openPane($, 'advisor')}
         />
       ) : (
-        <Text>Advisor: 🔒 {state.advisor.lock}</Text>
+        <Text>{formatLocked('Advisor', state.advisor.lock)}</Text>
       )}
       <Button key="pane" label="⚙" onPress={() => openPane($, null)} />
     </Box>

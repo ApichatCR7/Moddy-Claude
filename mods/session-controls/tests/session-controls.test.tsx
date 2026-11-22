@@ -12,7 +12,7 @@ import {
 } from './screen'
 
 test('the Band shows Context usage and the Advisor model', async ($, on) => {
-  fakeEngine(on, { contextPercent: 62, advisorModel: 'opus' })
+  fakeEngine(on, { contextUsage: 62, advisorModel: 'opus' })
   await startSession($)
 
   const ui = await $.ui.mount(BAND)
@@ -24,7 +24,7 @@ test('the Band shows Context usage and the Advisor model', async ($, on) => {
 })
 
 test('the Band shows Autocompact on, with its Compact threshold in tokens and percent', async ($, on) => {
-  fakeEngine(on, { compactWindow: 160_000, compactSource: 'settings' })
+  fakeEngine(on, { autoCompactWindow: 160_000, autocompactSource: 'settings' })
   await startSession($)
 
   const ui = await $.ui.mount(BAND)
@@ -35,7 +35,7 @@ test('the Band shows Autocompact on, with its Compact threshold in tokens and pe
 })
 
 test('the Band shows Autocompact off without a Compact threshold', async ($, on) => {
-  fakeEngine(on, { isAutoCompactEnabled: false, compactWindow: 160_000 })
+  fakeEngine(on, { isAutoCompactEnabled: false, autoCompactWindow: 160_000 })
   await startSession($)
 
   const ui = await $.ui.mount(BAND)
@@ -111,12 +111,12 @@ test('a managed source that owns the autoCompact row makes Autocompact Locked', 
 })
 
 test('a session measure event with new usage updates the Band', async ($, on) => {
-  const engine = fakeEngine(on, { contextPercent: 62 })
+  const engine = fakeEngine(on, { contextUsage: 62 })
   await startSession($)
   const ui = await $.ui.mount(BAND)
   expect(await bandText(ui)).toContain('Context: 62%')
 
-  engine.state.contextPercent = 71
+  engine.state.contextUsage = 71
   await $.session.measure(measured(71))
 
   expect(await bandText(ui)).toContain('Context: 71%')
@@ -136,7 +136,7 @@ test('a change made by typing /advisor shows on the Band after the next turn', a
 })
 
 test('the Band keeps showing the settings while Context usage is not available yet', async ($, on) => {
-  fakeEngine(on, { contextPercent: undefined, advisorModel: 'opus' })
+  fakeEngine(on, { contextUsage: undefined, advisorModel: 'opus' })
   await startSession($)
   const ui = await $.ui.mount(BAND)
 
@@ -206,7 +206,7 @@ test('on a 200k-window model no option below 50% is offered', async ($, on) => {
 })
 
 test('options whose token count is below the 100k minimum are left out', async ($, on) => {
-  fakeEngine(on, { window: 150_000, compactWindow: 150_000 })
+  fakeEngine(on, { window: 150_000, autoCompactWindow: 150_000 })
   await startSession($)
   const ui = await $.ui.mount(PANE)
 
@@ -249,7 +249,7 @@ test('after picking 80% the Band shows 160k (80%), the figure the person picked'
 })
 
 test('picking Auto runs the autocompact command with auto', async ($, on) => {
-  const engine = fakeEngine(on, { compactWindow: 160_000, compactSource: 'settings' })
+  const engine = fakeEngine(on, { autoCompactWindow: 160_000, autocompactSource: 'settings' })
   await startSession($)
   const ui = await $.ui.mount(PANE)
   expect(await chosenIn(ui, 'threshold')).toBe('160k (80%)')
@@ -266,7 +266,7 @@ test('picking Auto runs the autocompact command with auto', async ($, on) => {
 })
 
 test('a threshold set earlier that is not one of the options is still shown as the current value', async ($, on) => {
-  fakeEngine(on, { compactWindow: 123_000, compactSource: 'settings' })
+  fakeEngine(on, { autoCompactWindow: 123_000, autocompactSource: 'settings' })
   await startSession($)
   const ui = await $.ui.mount(PANE)
 
@@ -304,8 +304,8 @@ test('the Pane shows Autocompact Locked with the reason, and no toggle', async (
 test('an environment variable that forces the Autocompact window makes the Compact threshold Locked', async ($, on) => {
   const engine = fakeEngine(on, {
     env: { CLAUDE_CODE_AUTO_COMPACT_WINDOW: '150000' },
-    compactWindow: 150_000,
-    compactSource: 'env',
+    autoCompactWindow: 150_000,
+    autocompactSource: 'env',
   })
   await startSession($)
   const ui = await $.ui.mount(PANE)
@@ -438,8 +438,8 @@ test('the Pane opened from the Advisor segment starts on the Advisor picker, and
 test('percent and tokens are measured against the model window, not the compaction window', async ($, on) => {
   const engine = fakeEngine(on, {
     window: 1_000_000,
-    compactWindow: 400_000,
-    compactSource: 'settings',
+    autoCompactWindow: 400_000,
+    autocompactSource: 'settings',
   })
   await startSession($)
   const band = await $.ui.mount(BAND)
@@ -521,4 +521,18 @@ test('the Pane still offers Autocompact and the Advisor when usage is not availa
   expect(await chosenIn(ui, 'advisor')).toBe('Opus')
   expect(await ui.find({ type: 'Select', key: 'threshold' })).toBeUndefined()
   await ui.unmount()
+})
+
+test('Claude Code\'s words about a rejected change are gone after the next turn', async ($, on) => {
+  const rejection = 'Opus cannot advise a main model that ranks above it.'
+  fakeEngine(on, { advisorModel: 'sonnet', advisorRejection: rejection })
+  await startSession($)
+  const pane = await $.ui.mount(PANE)
+  await pane.select({ key: 'advisor', value: 'opus' })
+  expect(await pane.find({ type: 'Text', text: rejection })).toBeDefined()
+
+  await $.session.measure(measured(10))
+
+  expect(await pane.find({ type: 'Text', text: rejection })).toBeUndefined()
+  await pane.unmount()
 })

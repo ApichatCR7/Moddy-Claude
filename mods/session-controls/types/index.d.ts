@@ -5,7 +5,7 @@ export type ControlsSnapshot = {
   /** The current model's full context window, in tokens. */
   window?: number
   /** Context usage: whole percent of that window. Absent until a response. */
-  contextPercent?: number
+  contextUsage?: number
   autocompact: { isOn: boolean; lock?: string }
   threshold: {
     /** The Compact threshold in tokens, as Claude Code's `/autocompact` sets it. */

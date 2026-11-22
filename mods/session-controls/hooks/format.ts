@@ -9,3 +9,9 @@ export const percentOf = (tokens: number, window: number): number =>
 /** The Compact threshold as `<tokens in k> (<percent>%)`, e.g. `160k (80%)`. */
 export const formatThreshold = (tokens: number, window: number): string =>
   `${formatTokens(tokens)} (${percentOf(tokens, window)}%)`
+
+export const formatOnOff = (isOn: boolean): string => (isOn ? 'ON' : 'OFF')
+
+/** A Locked control: its label, a lock and the reason, as one line. */
+export const formatLocked = (label: string, reason: string): string =>
+  `${label} 🔒 ${reason}`

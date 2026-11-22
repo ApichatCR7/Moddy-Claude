@@ -18,11 +18,11 @@ export type EngineState = {
   /** The current model's full context window. */
   window: number
   /** Context usage as Claude Code reports it; undefined before a response. */
-  contextPercent?: number
+  contextUsage?: number
   isAutoCompactEnabled: boolean
   /** What Claude Code reports as the compaction window in force. */
-  compactWindow: number
-  compactSource: ContextWindowSource
+  autoCompactWindow: number
+  autocompactSource: ContextWindowSource
   /** The `advisorModel` setting as saved; undefined when none. */
   advisorModel?: string
   /** Whether `/advisor` is offered at all (feature, account, provider). */
@@ -48,7 +48,7 @@ export type Call =
   | { call: 'ui.open'; pane: PaneOpenArgs }
   | { call: 'ui.toast'; text: string }
 
-/** What the Mod must show for a model, whatever the window is. */
+/** Where Claude Code starts compacting sits this far below its compaction window. */
 const RESERVED_BELOW_WINDOW = 33_000
 
 /** Claude Code's own words, as the fake engine answers. */
@@ -58,8 +58,8 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
   const state: EngineState = {
     window: 200_000,
     isAutoCompactEnabled: true,
-    compactWindow: 200_000,
-    compactSource: 'auto',
+    autoCompactWindow: 200_000,
+    autocompactSource: 'auto',
     isAdvisorOffered: true,
     env: {},
     isAutoCompactRowLocked: false,
@@ -86,18 +86,18 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
       throw new Error('no session bound')
     }
     const tokens =
-      state.contextPercent === undefined
+      state.contextUsage === undefined
         ? undefined
-        : Math.round((state.contextPercent / 100) * state.window)
+        : Math.round((state.contextUsage / 100) * state.window)
     // The engine measures the breakdown against the compaction window, and its
     // trigger point sits below that window. The Mod has to see through both.
     const breakdown = {
       isAutoCompactEnabled: isOn(),
       autoCompactThreshold: isOn()
-        ? state.compactWindow - RESERVED_BELOW_WINDOW
+        ? state.autoCompactWindow - RESERVED_BELOW_WINDOW
         : undefined,
-      rawMaxTokens: state.compactWindow,
-      autocompactSource: state.compactSource,
+      rawMaxTokens: state.autoCompactWindow,
+      autocompactSource: state.autocompactSource,
       percentage: 0,
     } as unknown as SessionContextBreakdown
 
@@ -108,7 +108,7 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
         context: {
           window: state.window,
           tokens,
-          percent: state.contextPercent,
+          percent: state.contextUsage,
           ...(e.breakdown === undefined ? {} : { breakdown }),
         },
       },
@@ -164,11 +164,11 @@ export const fakeEngine = (on: On, initial: Partial<EngineState> = {}) => {
 
     if (e.command === 'autocompact') {
       if (e.args === 'auto') {
-        state.compactSource = 'auto'
-        state.compactWindow = state.window
+        state.autocompactSource = 'auto'
+        state.autoCompactWindow = state.window
       } else {
-        state.compactSource = 'settings'
-        state.compactWindow = Number(e.args)
+        state.autocompactSource = 'settings'
+        state.autoCompactWindow = Number(e.args)
       }
 
       return { text: state.settleText }

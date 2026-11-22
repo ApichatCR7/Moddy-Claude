@@ -1,14 +1,14 @@
-import type { EngineInterface } from 'claude-code'
+import type { EngineInterface, RenderInput } from 'claude-code'
 
 import { pickAdvisor, pickThreshold, toggleAutocompact } from './actions'
 import { advisorChoice } from './advisors'
-import { formatThreshold } from './format'
+import { formatLocked, formatOnOff, formatThreshold } from './format'
 import { readFocus, readNotice, readSnapshot } from './state'
 import { thresholdChoice } from './threshold'
 
 export async function drawPane(
   $: EngineInterface,
-  e: Parameters<EngineInterface['ui']['resolve']>[0],
+  e: RenderInput<'Pane'>,
 ) {
   const { Box, Button, Select, Text } = $.ui.resolve(e)
   const state = await readSnapshot($)
@@ -34,12 +34,12 @@ export async function drawPane(
         {state.autocompact.lock === undefined ? (
           <Button
             key="autocompact"
-            label={`Autocompact: ${isOn ? 'ON' : 'OFF'} (tap to turn ${isOn ? 'off' : 'on'})`}
+            label={`Autocompact: ${formatOnOff(isOn)} (tap to turn ${isOn ? 'off' : 'on'})`}
             onPress={() => toggleAutocompact($)}
           />
         ) : (
           <Text>
-            Autocompact: {isOn ? 'ON' : 'OFF'} 🔒 {state.autocompact.lock}
+            {formatLocked(`Autocompact: ${formatOnOff(isOn)}`, state.autocompact.lock)}
           </Text>
         )}
         {notice?.section === 'autocompact' && <Text dimColor>{notice.text}</Text>}
@@ -47,7 +47,7 @@ export async function drawPane(
       <Box flexDirection="column">
         {threshold.lock !== undefined ? (
           <Text>
-            Compact threshold: {current} 🔒 {threshold.lock}
+            {formatLocked(`Compact threshold: ${current}`, threshold.lock)}
           </Text>
         ) : choice === null ? (
           <Text dimColor>Compact threshold: {current}</Text>
@@ -77,7 +77,7 @@ export async function drawPane(
             />
           </>
         ) : (
-          <Text>Advisor: 🔒 {state.advisor.lock}</Text>
+          <Text>{formatLocked('Advisor', state.advisor.lock)}</Text>
         )}
         {notice?.section === 'advisor' && <Text dimColor>{notice.text}</Text>}
       </Box>

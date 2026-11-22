@@ -2,7 +2,7 @@ import type { Register } from 'claude-code'
 
 import { drawBand } from './band'
 import { drawPane } from './pane'
-import { refresh } from './state'
+import { refresh, setNotice } from './state'
 
 export const register: Register = on => {
   // So the Band is right before the first message.
@@ -17,6 +17,8 @@ export const register: Register = on => {
   // (`/autocompact`, `/advisor`, `/model`).
   on('session.measure', async ($, e, next) => {
     const measured = await next(e)
+    // Claude Code's words about an earlier change may be stale by now.
+    await setNotice($, null)
     await refresh($)
 
     return measured
