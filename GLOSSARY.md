@@ -29,8 +29,8 @@ Claude Code's automatic summarising of the earlier conversation when the context
 _Avoid_: auto compact, auto-summary
 
 **Compact threshold**:
-The context size at which Autocompact starts, set separately for each model and shown both in tokens and as a percentage of that model's context window.
-_Avoid_: trigger point, limit, compact window
+The context size a model's Autocompact is set to (Claude Code calls it the "auto-compact window"). It is set separately for each model and shown in tokens and as a percentage of that model's context window. Compaction actually begins a little before it.
+_Avoid_: trigger point, limit
 
 **Context usage**:
 How full the context window is right now, as a percentage of the current model's context window.
