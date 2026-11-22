@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Enable once per clone: git config core.hooksPath .githooks
+# Commits that touch no Mod, the Marketplace or the pinned types skip the check.
+git diff --cached --quiet -- mods .claude-plugin vendor && exit 0
+exec "$(git rev-parse --show-toplevel)/scripts/check.sh"

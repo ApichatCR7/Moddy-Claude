@@ -1,0 +1,27 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Pinned to the Claude Code the vendored engine types were written by.
+      - run: npm install -g @anthropic-ai/claude-code@2.1.330 typescript@6.0.2
+      - name: scripts/check.sh
+        env:
+          DISABLE_AUTOUPDATER: '1'
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = pull_request ]; then base=origin/$BASE_REF; else base=$BEFORE; fi
+          scripts/check.sh "$base"
